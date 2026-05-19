@@ -257,7 +257,14 @@ local function ApplyPulseSpeed()
     end
 end
 
-function KeyChangeReminder:ShowReminder(msg)
+-- ShowReminder(msg [, chatMsg])
+--
+-- msg      — text rendered on the on-screen label.
+-- chatMsg  — text echoed to the chat frame (defaults to msg when omitted).
+--
+-- Keeping the two strings separate lets callers display a short on-screen
+-- message while printing a richer line to chat, without truncation on screen.
+function KeyChangeReminder:ShowReminder(msg, chatMsg)
     local lbl = GetOrCreateLabel()
     ApplyLabelPosition()
     ApplyPulseSpeed()
@@ -281,8 +288,8 @@ function KeyChangeReminder:ShowReminder(msg)
     reminderWatching = true
     frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
-    -- Also echo to chat with the addon prefix as required by spec Part 5.
-    print(string.format(FORMAT_SLUG .. " %s", msg))
+    -- Echo to chat (spec Part 5).  Use chatMsg when provided; fall back to msg.
+    print(string.format(FORMAT_SLUG .. " %s", chatMsg or msg))
 end
 
 function KeyChangeReminder:HideReminder()
@@ -541,24 +548,31 @@ end
 -- Reminder message builder
 -- ──────────────────────────────────────────────
 --
--- Constructs the human-readable reminder string.
--- In auto mode, includes run level and bag level so the player knows why the
--- reminder fired.  In manual mode, the simple "Change your key!" suffices.
+-- Returns (displayMsg, chatMsg).
 --
--- Spec Part 5: all output must carry the |cff00ccff[KCR]|r prefix (done in ShowReminder).
+-- displayMsg — short string shown on the on-screen label.
+--              Always "Change your key!" so it never truncates regardless of
+--              how many digits the key level has.
+-- chatMsg    — fuller string echoed to the chat frame.
+--              In auto mode this includes run level and bag level so the player
+--              knows why the reminder fired.  In manual mode it matches displayMsg.
+--
+-- Spec Part 5: the [KCR] prefix is prepended by ShowReminder, not here.
 local function BuildReminderMessage()
     local autoMode = KeyChangeReminder:Get("autoMode")
     if autoMode then
         local runLevel = lastRunLevel
         local bagLevel = GetBagKeystoneLevel()
         -- [KCR_AUDIT: spec Part 2 COMPLETED trigger requires message include both levels]
-        return string.format(
+        -- Level context goes to chat only; on-screen label stays short to avoid truncation.
+        local chatMsg = string.format(
             "Change your key!  (run +%s | your key +%s)",
             tostring(runLevel or "?"),
             tostring(bagLevel or "?")
         )
+        return "Change your key!", chatMsg
     end
-    return "Change your key!"
+    return "Change your key!", "Change your key!"
 end
 
 -- Reset all per-run state back to neutral.
@@ -796,7 +810,8 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2)
             end
 
             DBG("Completion timer: showing reminder")
-            KeyChangeReminder:ShowReminder(BuildReminderMessage())
+            local displayMsg, chatMsg = BuildReminderMessage()
+            KeyChangeReminder:ShowReminder(displayMsg, chatMsg)
             ResetRunState()
         end)
 
