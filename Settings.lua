@@ -219,7 +219,7 @@ local function BuildPanel(panel)
     pulseSlider:SetMinMaxValues(0.3, 2.0)
     pulseSlider:SetValueStep(0.1)
     pulseSlider:SetObeyStepOnDrag(true)
-    pulseSlider:SetValue(pulseVal)
+    pulseSlider:SetValue(KeyChangeReminder:Get("pulseSpeed") or 1.0)
     _G[pulseSlider:GetName() .. "Low"]:SetText("Fast")
     _G[pulseSlider:GetName() .. "High"]:SetText("Slow")
     _G[pulseSlider:GetName() .. "Text"]:SetText("")
@@ -227,21 +227,23 @@ local function BuildPanel(panel)
         val = math.floor(val * 10 + 0.5) / 10
         KeyChangeReminder:Set("pulseSpeed", val)
         speedLabel:SetText(pulseLabel(val))
-        if KeyChangeReminderLabel and KeyChangeReminderLabel:IsShown() then
+        if KeyChangeReminderLabel then
+            local speed = val
+            local half = speed / 2
             local anims = { KeyChangeReminderLabel.pulseGroup:GetAnimations() }
-            local half = val / 2
             for _, anim in ipairs(anims) do
                 anim:SetDuration(half)
             end
         end
     end)
-    y = y - 46
 
-    -- ── Text Color ────────────────────────────────────────────────────────
-    MakeHeader(content, "Text Color", y)
-    y = y - 20
+    y = y - 44
+
+    -- ── Color ─────────────────────────────────────────────────────────────
+    MakeHeader(content, "Color", y)
+    y = y - 26
     MakeLine(content, y)
-    y = y - 18
+    y = y - 14
 
     local COLOR_LAYOUT = {
         { name = "RED",    label = "Red",    col = {1, 0.2, 0.2} },
@@ -366,7 +368,10 @@ local function BuildPanel(panel)
     MakeLabel(content, "Show a reminder to switch to your M+ talents when entering a dungeon.", y, 16)
     y = y - 28
 
-    local talentCB = CreateFrame("CheckButton", "KeyChangeReminderTalentCB", content, "InterfaceOptionsCheckButtonTemplate")
+    -- [KCR_AUDIT: Patch F — InterfaceOptionsCheckButtonTemplate was removed in Midnight
+    --  12.0.  UICheckButtonTemplate is the supported replacement for standalone
+    --  checkboxes outside the old InterfaceOptions panel system.]
+    local talentCB = CreateFrame("CheckButton", "KeyChangeReminderTalentCB", content, "UICheckButtonTemplate")
     talentCB:SetPoint("TOPLEFT", 16, y)
     _G[talentCB:GetName() .. "Text"]:SetText("Enable talent reminder")
     talentCB:SetChecked(KeyChangeReminder:Get("talentReminder") or false)
@@ -408,11 +413,23 @@ local function BuildPanel(panel)
             return tostring(v)
         end
 
+        -- [KCR_AUDIT: Patch F (debug panel) — prefer GetChallengeCompletionInfo (12.0.5
+        --  name); fall back to GetCompletionInfo for safety.  Also prefer
+        --  C_ChallengeMode.GetActiveKeystoneInfo (present in 12.0.5) over the old
+        --  C_ChallengeMode.GetActiveKeystoneInfo from C_MythicPlus.]
+        if C_ChallengeMode and (C_ChallengeMode.GetChallengeCompletionInfo or C_ChallengeMode.GetCompletionInfo) then
+            local fn = C_ChallengeMode.GetChallengeCompletionInfo or C_ChallengeMode.GetCompletionInfo
+            local info = fn()
+            print("  GetChallengeCompletionInfo: " .. dumpVal(info))
+        else
+            print("  GetChallengeCompletionInfo: NOT AVAILABLE")
+        end
+
         if C_ChallengeMode and C_ChallengeMode.GetActiveKeystoneInfo then
             local a, b, c = C_ChallengeMode.GetActiveKeystoneInfo()
-            print("  GetActiveKeystoneInfo: " .. dumpVal(a) .. " | " .. dumpVal(b) .. " | " .. dumpVal(c))
+            print("  C_ChallengeMode.GetActiveKeystoneInfo: " .. dumpVal(a) .. " | " .. dumpVal(b) .. " | " .. dumpVal(c))
         else
-            print("  GetActiveKeystoneInfo: NOT AVAILABLE")
+            print("  C_ChallengeMode.GetActiveKeystoneInfo: NOT AVAILABLE")
         end
 
         if C_MythicPlus and C_MythicPlus.GetOwnedKeystoneChallengeMapID then
