@@ -12,3 +12,4 @@
 
 Settings.lua
 Core.lua
+RaidTalentReminder.lua
