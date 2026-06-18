@@ -1,4 +1,4 @@
-## Interface: 120000, 120001, 120005
+## Interface: 120000, 120001, 120005, 120007
 ## Version: @project-version@
 ## Title: KeyChangeReminder
 ## Note: Simple Reminder to Change your Keystone at the end of a Mythic+ Instance.
